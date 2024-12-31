@@ -3,12 +3,12 @@ package com.binggre.velocitysocketserver.utils;
 import java.io.*;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static com.binggre.velocitysocketserver.utils.VelocitySocketServer.CLOSE;
 import static com.binggre.velocitysocketserver.utils.VelocitySocketServer.REQUEST;
 
-public class SocketClient {
+public class SocketServerClient {
 
     private static final AtomicInteger generateId = new AtomicInteger(0);
     private final int id;
@@ -16,12 +16,10 @@ public class SocketClient {
 
     private final BufferedReader reader;
     private final BufferedWriter writer;
-    private final ExecutorService executor;
 
-    public SocketClient(Socket socket, ExecutorService clientPool) throws IOException {
+    public SocketServerClient(Socket socket) throws IOException {
         this.socket = socket;
         this.id = generateId.incrementAndGet();
-        this.executor = clientPool;
         this.reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
         this.writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8));
     }
@@ -35,29 +33,37 @@ public class SocketClient {
     }
 
     public void run() {
-        executor.execute(() -> {
-            while (true) {
-                try {
-                    String read = reader.readLine();
-                        // 씨발 왜 안 되냐고
-                    if (read.startsWith(REQUEST)) {
-                        read = read.replace(REQUEST, "");
-                        SocketServer.getInstance().request(read, socket.getPort(), this.id);
+        new Thread(this::handleThread).start();
+    }
 
-                    } else {
-                        SocketServer.getInstance().send(read, this.id);
-                    }
-                } catch (Exception ignored) {
+    private void handleThread() {
+        while (true) {
+            try {
+                String read = reader.readLine();
+                if (read == null || read.isEmpty()) {
+                    continue;
                 }
+                if (read.startsWith(CLOSE)) {
+                    SocketServer.getInstance().close(this);
+
+                    // 씨발 왜 안 되냐고
+                } else if (read.startsWith(REQUEST)) {
+                    read = read.replace(REQUEST, "");
+                    SocketServer.getInstance().request(read, socket.getPort());
+
+                } else {
+                    SocketServer.getInstance().send(read, this.id);
+                }
+            } catch (Exception ignored) {
             }
-        });
+        }
     }
 
     public void send(String value) {
         try {
             writer.write(value + "\n");
             writer.flush();
-        } catch (IOException e) {
+        } catch (IOException ignored) {
             SocketServer.getInstance().close(this);
         }
     }

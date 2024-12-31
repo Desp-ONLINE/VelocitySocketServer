@@ -14,6 +14,8 @@ public class VelocitySocketServer {
     private static VelocitySocketServer instance;
     public static final String REQUEST = "Request:";
     public static final String RESPONSE = "Response:";
+    public static final String CLOSE = "Close:";
+    public static final String REFRESH_CONNECT_AMOUNT = "RefreshConnectAmount:";
 
     public static VelocitySocketServer getInstance() {
         return instance;
