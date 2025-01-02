@@ -46,10 +46,15 @@ public class SocketServerClient {
                 if (read.startsWith(CLOSE)) {
                     SocketServer.getInstance().close(this);
 
-                    // 씨발 왜 안 되냐고
                 } else if (read.startsWith(REQUEST)) {
                     read = read.replace(REQUEST, "");
-                    SocketServer.getInstance().request(read, socket.getPort());
+                    String socketId = read.replaceAll("^(\\d+).*", "$1");
+                    read = read.substring(socketId.length());
+
+                    System.out.println("socketId = " + socketId);
+                    System.out.println("read = " + read);
+                    System.out.println("this.id = " + this.id);
+                    SocketServer.getInstance().request(read, this.id, Integer.parseInt(socketId), socket.getPort());
 
                 } else {
                     SocketServer.getInstance().send(read, this.id);

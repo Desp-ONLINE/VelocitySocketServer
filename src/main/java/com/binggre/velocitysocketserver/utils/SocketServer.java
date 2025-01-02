@@ -5,6 +5,8 @@ import org.slf4j.Logger;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.Collection;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
@@ -45,7 +47,7 @@ public class SocketServer {
                     client.run();
                     logger.info("Connected client id : {}", client.getId());
                     logger.info("Current connected count {}", connectedClients.size());
-                    refreshConnectedCount();
+                    refreshConnectedList();
                 } catch (IOException e) {
                     System.err.println("Error while accepting client: " + e.getMessage());
                 }
@@ -53,12 +55,19 @@ public class SocketServer {
         });
     }
 
-    private void refreshConnectedCount() {
-        int size = connectedClients.size();
-        for (SocketServerClient socket : connectedClients.values()) {
-            socket.send(VelocitySocketServer.REFRESH_CONNECT_AMOUNT + size);
+    private void refreshConnectedList() {
+        Collection<SocketServerClient> values = connectedClients.values();
+        List<Integer> refreshList = values.stream().map(SocketServerClient::getId).toList();
+
+        StringBuilder refreshListString = new StringBuilder();
+        for (Integer id : refreshList) {
+            refreshListString.append(id);
         }
-        logger.info("Refresh connected count {}", size);
+
+        for (SocketServerClient socket : values) {
+            socket.send(VelocitySocketServer.REFRESH_CONNECT_LIST + refreshListString);
+        }
+        logger.info("Refresh connected list {}", refreshList);
     }
 
     public void send(String value, int exception) {
@@ -69,10 +78,15 @@ public class SocketServer {
         }
     }
 
-    public void request(String value, int port) {
+    public void request(String value, int exception, int socketId, int port) {
         String request = RESPONSE + port + value;
         for (SocketServerClient socket : connectedClients.values()) {
-            socket.send(request);
+            if (socket.getId() == exception) {
+                continue;
+            }
+            if (socket.getId() == socketId) {
+                socket.send(request);
+            }
         }
     }
 
@@ -83,6 +97,6 @@ public class SocketServer {
     public void close(SocketServerClient client) {
         client.close();
         remove(client.getId());
-        refreshConnectedCount();
+        refreshConnectedList();
     }
 }
