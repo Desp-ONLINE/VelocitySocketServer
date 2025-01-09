@@ -12,6 +12,7 @@ import static com.binggre.velocitysocketserver.BuildConstants.VERSION;
 public class VelocitySocketServer {
 
     private static VelocitySocketServer instance;
+
     public static final String REQUEST = "Request:";
     public static final String RESPONSE = "Response:";
     public static final String CLOSE = "Close:";
